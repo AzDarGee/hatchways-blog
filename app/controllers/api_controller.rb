@@ -15,9 +15,9 @@ class ApiController < ApplicationController
     sortBy = ['id', 'reads', 'likes', 'popularity']
     direction = ['asc', 'desc']
 
-    if params['sortby']
-      if sortBy.include?(params['sortby'])
-        sortBy = params['sortby']
+    if params['sortBy']
+      if sortBy.include?(params['sortBy'])
+        sortBy = params['sortBy']
       else
         # Default value is 'id'
         sortBy = sortBy[0]
@@ -43,11 +43,19 @@ class ApiController < ApplicationController
 
       tags.split(",").each do |tag|
         @posts = @posts.flatten
-        api_endpoint = URI("https://api.hatchways.io/assessment/blog/posts?tag=#{tag}&sortby=#{sortBy}&direction=#{direction}")
+        api_endpoint = URI("https://api.hatchways.io/assessment/blog/posts?tag=#{tag}")
         results = JSON.parse(Net::HTTP.get(api_endpoint))["posts"]
         @posts.push(results)
       end
     end
+
+    # if direction == 'asc'
+    #   sorted_array = @posts.sort_by { |hash| hash['id'].to_i }
+    # else
+    #   sorted_array = @posts.sort_by { |hash| hash['id'].to_i }.reverse
+    # end
+    #
+    puts @posts
 
     @posts = {
       "posts_count": @posts.count,
