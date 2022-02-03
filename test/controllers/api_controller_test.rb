@@ -6,8 +6,8 @@ class ApiControllerTest < ActionDispatch::IntegrationTest
       get ping_url
       assert_response :success
     end
-    test "should get ping" do
-      get ping_url
+    test "should get posts" do
+      get posts_url
       assert_response :success
     end
   end

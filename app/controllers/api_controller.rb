@@ -2,7 +2,7 @@ class ApiController < ApplicationController
 
   def ping
     respond_to do |format|
-      format.json  { render :json => { "success": true, "response_status_code": 200 } }
+      format.json  { render :json => { "success": true, "response_status_code": 200 }, cached: true }
     end
   end
 
@@ -158,13 +158,14 @@ class ApiController < ApplicationController
 
     respond_to do |format|
       if @error_msg.empty?
-        format.json  { render :json => @posts_con }
+        format.json  { render :json => @posts_con, cached: true }
       else
         format.json {
           render :json => {
             "error": @error_msg,
             "response_status_code": 400
-          }
+          },
+          cached: true
         }
       end
     end
