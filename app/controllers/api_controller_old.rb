@@ -1,4 +1,4 @@
-class ApiController < ApplicationController
+class ApiControllerOld < ApplicationController
 
   def ping
     respond_to do |format|
