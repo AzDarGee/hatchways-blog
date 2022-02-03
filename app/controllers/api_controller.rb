@@ -10,16 +10,21 @@ class ApiController < ApplicationController
     require 'net/http'
     require 'json'
     require 'benchmark'
+    require 'thread'
 
     sorted_array = []
+    sequential_duration = 0
+    concurrent_duration = 0
 
     bm_result = Benchmark.measure do
       @posts = []
+      @posts_con = []
       @error_msg = []
-
 
       sortBy = ['id', 'reads', 'likes', 'popularity']
       direction = ['asc', 'desc']
+
+
 
       if params['sortBy']
         if sortBy.include?(params['sortBy'])
@@ -49,12 +54,41 @@ class ApiController < ApplicationController
 
       if params['tag']
         tags = params['tag'].strip
+        tag_count = tags.split(",").count
+        @posts = @posts.flatten
+        @posts_con = @posts_con.flatten
 
-        tags.split(",").each do |tag|
-          @posts = @posts.flatten
-          api_endpoint = URI("https://api.hatchways.io/assessment/blog/posts?tag=#{tag}")
+        # If only 1 tag is inputted
+        if tag_count == 1
+          api_endpoint = URI("https://api.hatchways.io/assessment/blog/posts?tag=#{tags}")
           results = JSON.parse(Net::HTTP.get(api_endpoint))["posts"]
           @posts.push(results)
+        else
+          def now
+            Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          end
+          start_sequential = now
+          # If multiple tags are inputted, make a sequential request
+          tags.split(",").each do |tag|
+            api_endpoint = URI("https://api.hatchways.io/assessment/blog/posts?tag=#{tag}")
+            results = JSON.parse(Net::HTTP.get(api_endpoint))["posts"]
+            @posts.push(results)
+          end
+          finish_sequential = now
+          sequential_duration = (finish_sequential - start_sequential).round(12)
+
+          start_concurrent = now
+          # If multiple tags are inputted, make a concurrent request
+          tags.split(",").each do |tag|
+            Thread.new do
+              api_endpoint = URI("https://api.hatchways.io/assessment/blog/posts?tag=#{tag}")
+              results = JSON.parse(Net::HTTP.get(api_endpoint))["posts"]
+              @posts_con.push(results)
+            end
+          end
+          finish_concurrent = now
+          concurrent_duration = (finish_concurrent - start_concurrent).round(12)
+
         end
 
         # Flatten all posts
@@ -103,12 +137,14 @@ class ApiController < ApplicationController
 
     @posts = {
       "realtime_benchmark_s": bm_result.real.round(12),
+      "sequential_requests_s": sequential_duration,
+      "concurrent_requests_s": concurrent_duration,
       "posts_count": sorted_array.count,
       "posts": sorted_array
     }
 
     respond_to do |format|
-      if not params['tag'].nil?
+      if @error_msg.empty?
         format.json  { render :json => @posts }
       else
         format.json {
